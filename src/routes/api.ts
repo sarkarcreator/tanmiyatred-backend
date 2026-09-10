@@ -64,6 +64,8 @@ router.delete('/properties/:id', requireAuth, requireRoles('SUPER_ADMIN','ADMIN'
 // Agents
 router.get('/agents', async(req,res)=>{try{return ok(res,await repository.getAgents({status:q(req,'status'),area:q(req,'area'),featured:q(req,'featured')==='true'?true:undefined}))}catch(e){return fail(res,e)}});
 router.post('/agents', requireAuth, async(req,res)=>{try{if(!req.body.name||!req.body.email||!req.body.brn)return fail(res,'Name, email, and BRN are required.',400);return ok(res,await repository.createAgent(req.body,currentActor(req)),201)}catch(e){return fail(res,e)}});
+router.patch('/agents/:id', requireAuth, requireRoles('SUPER_ADMIN','ADMIN'), async(req,res)=>{try{const updated=await repository.updateAgent(param(req,'id'),req.body,currentActor(req));if(!updated)return fail(res,'Agent not found',404);return ok(res,updated)}catch(e){return fail(res,e)}});
+router.delete('/agents/:id', requireAuth, requireRoles('SUPER_ADMIN','ADMIN'), async(req,res)=>{try{const deleted=await repository.deleteAgent(param(req,'id'),currentActor(req));if(!deleted)return fail(res,'Agent not found',404);return ok(res,{deleted:true})}catch(e){return fail(res,e)}});
 router.get('/agents/:slug', async(req,res)=>{try{const a=await repository.getAgentBySlug(param(req, 'slug'));if(!a)return fail(res,'Agent not found',404);return ok(res,a)}catch(e){return fail(res,e)}});
 
 // Customers
@@ -108,6 +110,3 @@ router.get('/timeline', async(_req,res)=>{try{return ok(res,await repository.get
 router.get('/careers', async(_req,res)=>{try{return ok(res,await repository.getCareers())}catch(e){return fail(res,e)}});
 
 export default router;
-
-
-
