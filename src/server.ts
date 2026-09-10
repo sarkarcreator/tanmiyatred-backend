@@ -11,6 +11,7 @@ import { initRepository } from '@/data/repository';
 
 const app = express();
 const port = Number(process.env.PORT || 4000);
+const host = process.env.HOST || '0.0.0.0';
 const uploadRoot = path.resolve(process.env.MEDIA_UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
 
 app.disable('x-powered-by');
@@ -36,7 +37,7 @@ app.use((err: unknown,_req: express.Request,res: express.Response,_next: express
 });
 
 initRepository().then(() => {
-  app.listen(port, () => console.log(`[Tanmiyat API] listening on http://localhost:${port}`));
+  app.listen(port, host, () => console.log(`[Tanmiyat API] listening on http://${host}:${port}`));
 }).catch((error) => {
   console.error('[Tanmiyat API] Startup failed:', error);
   process.exit(1);
