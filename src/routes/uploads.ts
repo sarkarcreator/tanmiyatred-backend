@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type Request } from 'express';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
@@ -7,7 +7,7 @@ import { requireAuth } from '@/middleware/auth';
 const router = Router();
 
 const uploadRoot = path.resolve(process.env.MEDIA_UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
-const publicBase = (process.env.MEDIA_PUBLIC_BASE_URL || '').replace(/\/$/, '');
+const configuredPublicBase = (process.env.MEDIA_PUBLIC_BASE_URL || '').replace(/\/$/, '');
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 100 * 1024 * 1024;
 const ALLOWED_PREFIXES = ['image/', 'video/'];
@@ -18,9 +18,17 @@ const EXTENSIONS: Record<string, string> = {
 
 function safeName(original: string, mime: string) {
   const base = original.replace(/[^a-zA-Z0-9._-]/g, '-').replace(/-+/g, '-').slice(-80) || 'media';
-  const ext = path.extname(base) || EXTENSIONS[mime] || '';
-  const stem = path.basename(base, path.extname(base)).slice(0, 60) || 'media';
+  const originalExt = path.extname(base);
+  const ext = EXTENSIONS[mime] || originalExt;
+  const stem = path.basename(base, originalExt).slice(0, 60) || 'media';
   return `${Date.now()}-${crypto.randomBytes(6).toString('hex')}-${stem}${ext}`;
+}
+
+function mediaBaseUrl(req: Request) {
+  if (configuredPublicBase) return configuredPublicBase;
+  const forwardedProto = req.get('x-forwarded-proto')?.split(',')[0]?.trim();
+  const protocol = forwardedProto || req.protocol;
+  return `${protocol}://${req.get('host')}`;
 }
 
 async function parseMultipart(req: NodeJS.ReadableStream & { headers: Record<string, string | string[] | undefined> }) {
@@ -76,8 +84,7 @@ router.post('/', requireAuth, async (req, res) => {
       if (part.data.length > MAX_FILE_BYTES) return res.status(413).json({ success: false, error: `${part.filename} exceeds the 50 MB per-file limit.` });
       const filename = safeName(part.filename, part.mime);
       await fs.writeFile(path.join(uploadRoot, filename), part.data);
-      const url = publicBase ? `${publicBase}/uploads/${encodeURIComponent(filename)}` : `/uploads/${encodeURIComponent(filename)}`;
-      files.push({ url, filename, mime: part.mime, size: part.data.length });
+      files.push({ url: `${mediaBaseUrl(req)}/uploads/${encodeURIComponent(filename)}`, filename, mime: part.mime, size: part.data.length });
     }
     return res.status(201).json({ success: true, data: files.length === 1 ? files[0] : { files } });
   } catch (error) {
