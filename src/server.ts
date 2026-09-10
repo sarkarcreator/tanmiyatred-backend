@@ -21,15 +21,12 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',').map(v => v.trim()) || ['http://localhost:3000'], credentials: true }));
 app.use(cookieParser());
 
-// Keep a general API safety net, but do not let normal admin authentication
-// requests consume the same bucket as public traffic. Login gets its own
-// stricter limiter below so brute-force protection remains in place.
 const apiRateLimit = rateLimit({
   windowMs: 60_000,
   limit: 600,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: req => req.path === '/auth/login',
+  skip: req => req.path === '/api/auth/login',
 });
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60_000,
