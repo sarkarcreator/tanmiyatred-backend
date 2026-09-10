@@ -30,7 +30,14 @@ router.post('/auth/login', async (req, res) => {
   } catch (e) { return fail(res, e); }
 });
 router.post('/auth/logout', (req, res) => { res.clearCookie('tanmiyat_session', { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/' }); return ok(res, { loggedOut: true }); });
-router.get('/auth/me', requireAuth, (req, res) => ok(res, req.user));
+router.get('/auth/me', requireAuth, (req, res) => {
+  res.set({
+    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  });
+  return ok(res, req.user);
+});
 
 // Dashboard
 router.get('/admin/stats', requireAuth, requireRoles('SUPER_ADMIN','ADMIN','SALES_MANAGER','CRM_MANAGER','VIEWER'), async (_req,res)=>{ try{return ok(res,await repository.getDashboardStats())}catch(e){return fail(res,e)} });
