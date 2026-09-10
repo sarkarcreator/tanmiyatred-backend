@@ -14,6 +14,10 @@ const port = Number(process.env.PORT || 4000);
 const uploadRoot = path.resolve(process.env.MEDIA_UPLOAD_DIR || path.join(process.cwd(), 'uploads'));
 
 app.disable('x-powered-by');
+// Hostinger places the Node app behind a reverse proxy and forwards the client IP.
+// Trust the first proxy hop so express-rate-limit can safely use X-Forwarded-For.
+app.set('trust proxy', 1);
+
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',').map(v => v.trim()) || ['http://localhost:3000'], credentials: true }));
 app.use(cookieParser());
