@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import path from 'node:path';
 import api from '@/routes/api';
 import crmActions from '@/routes/crmActions';
+import developmentCms from '@/routes/developmentCms';
 import uploads from '@/routes/uploads';
 import { initRepository } from '@/data/repository';
 
@@ -45,6 +46,7 @@ app.use('/uploads', express.static(uploadRoot, { maxAge: '30d', immutable: true 
 app.use('/api/uploads', uploads);
 app.use('/api', crmActions);
 app.use('/api/auth/login', loginRateLimit);
+app.use('/api', developmentCms);
 app.use('/api', api);
 app.use((_req,res)=>res.status(404).json({success:false,error:'API route not found'}));
 app.use((err: unknown,_req: express.Request,res: express.Response,_next: express.NextFunction)=>{
