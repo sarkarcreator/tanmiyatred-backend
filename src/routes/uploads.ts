@@ -14,7 +14,18 @@ const ALLOWED_PREFIXES = ['image/', 'video/'];
 const EXTENSIONS: Record<string, string> = {
   'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp', 'image/gif': '.gif',
   'image/avif': '.avif', 'video/mp4': '.mp4', 'video/webm': '.webm', 'video/quicktime': '.mov',
+  'application/pdf': '.pdf', 'application/msword': '.doc',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.ms-excel': '.xls',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'application/vnd.ms-powerpoint': '.ppt',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
 };
+const ALLOWED_DOCUMENTS = new Set([
+  'application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint','application/vnd.openxmlformats-officedocument.presentationml.presentation',
+]);
 
 function safeName(original: string, mime: string) {
   const base = original.replace(/[^a-zA-Z0-9._-]/g, '-').replace(/-+/g, '-').slice(-80) || 'media';
@@ -77,10 +88,10 @@ router.post('/', requireAuth, async (req, res) => {
     await fs.mkdir(uploadRoot, { recursive: true });
     const files: Array<{ url: string; filename: string; mime: string; size: number }> = [];
     for (const part of parts) {
-      if (!ALLOWED_PREFIXES.some((prefix) => part.mime.startsWith(prefix))) {
-        return res.status(400).json({ success: false, error: `Unsupported media type: ${part.mime}` });
-      }
-      if (!EXTENSIONS[part.mime]) return res.status(400).json({ success: false, error: `Unsupported media format: ${part.mime}` });
+      const isMedia = ALLOWED_PREFIXES.some((prefix) => part.mime.startsWith(prefix));
+      const isDocument = ALLOWED_DOCUMENTS.has(part.mime);
+      if (!isMedia && !isDocument) return res.status(400).json({ success: false, error: `Unsupported file type: ${part.mime}` });
+      if (!EXTENSIONS[part.mime]) return res.status(400).json({ success: false, error: `Unsupported file format: ${part.mime}` });
       if (part.data.length > MAX_FILE_BYTES) return res.status(413).json({ success: false, error: `${part.filename} exceeds the 50 MB per-file limit.` });
       const filename = safeName(part.filename, part.mime);
       await fs.writeFile(path.join(uploadRoot, filename), part.data);
@@ -89,7 +100,7 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(201).json({ success: true, data: files.length === 1 ? files[0] : { files } });
   } catch (error) {
     console.error('[Tanmiyat Upload]', error);
-    return res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Media upload failed.' });
+    return res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Upload failed.' });
   }
 });
 
